@@ -85,58 +85,70 @@ with tab2:
             2. **Contacto ligero:** Toca suavemente tus labios y lengua.
             3. **Velocidad cómoda:** Busca tu propio ritmo, sin prisas.
             """)
-       # --- BLOQUE DE PROCESAMIENTO CON MÉTRICAS VISUALES ---
+# --- BLOQUE DE PROCESAMIENTO CON MÉTRICAS TÉCNICAS ---
         if audio_grabado:
             st.audio(audio_grabado['bytes'])
             if st.button("Analizar ahora"):
-                with st.spinner("Calculando métricas de fluidez..."):
+                with st.spinner("Calculando PPM y Fluidez..."):
                     try:
-                        # 1. Análisis técnico con librosa
+                        # 1. Análisis de audio
                         audio_array, sr = librosa.load(io.BytesIO(audio_grabado['bytes']), sr=None)
                         duracion = librosa.get_duration(y=audio_array, sr=sr)
                         
-                        # 2. Consulta a la IA con formato específico
+                        # 2. Prompt específico para obtener datos numéricos
                         prompt = f"""
                         Analiza la fluidez de un/a {genero} de {edad} años. 
-                        Duración del audio: {duracion:.1f} segundos.
-                        Devuelve PRIMERO tres valores numéricos seguidos de una breve explicación:
-                        1. Porcentaje de fluidez (0-100).
-                        2. Número estimado de pausas largas.
-                        3. Velocidad (Lenta/Normal/Rápida).
-                        Luego da tus consejos constructivos.
+                        Duración: {duracion:.1f}s.
+                        
+                        IMPORTANTE: Calcula y devuelve los siguientes datos exactos al inicio de tu respuesta con este formato:
+                        - PALABRAS_MINUTO: [valor]
+                        - PORCENTAJE_FLUIDEZ: [valor]%
+                        - BLOQUEOS_DETECTADOS: [valor]
+                        
+                        Después, proporciona un análisis constructivo y consejos.
                         """
                         
                         contenido = [prompt, {"mime_type": "audio/wav", "data": audio_grabado['bytes']}]
                         response = model.generate_content(contenido)
                         texto_ia = response.text
 
-                        # 3. MOSTRAR MÉTRICAS (La parte visual que te gusta)
-                        st.subheader("📊 Resultados del Análisis")
-                        m1, m2, m3 = st.columns(3)
+                        # 3. Extracción de datos con Regex (para las métricas)
+                        def extraer_valor(patron, texto):
+                            match = re.search(patron, texto)
+                            return match.group(1) if match else "--"
+
+                        ppm = extraer_valor(r"PALABRAS_MINUTO:\s*(\d+)", texto_ia)
+                        fluidez = extraer_valor(r"PORCENTAJE_FLUIDEZ:\s*(\d+)", texto_ia)
+                        bloqueos = extraer_valor(r"BLOQUEOS_DETECTADOS:\s*(\d+)", texto_ia)
+
+                        # 4. MOSTRAR MÉTRICAS VISUALES
+                        st.subheader("📊 Resultados Técnicos")
+                        m1, m2, m3, m4 = st.columns(4)
                         
-                        # Intentamos extraer números o ponemos valores por defecto para que no falle
                         with m1:
-                            st.metric("Duración Total", f"{duracion:.1f}s")
+                            st.metric("Velocidad (PPM)", f"{ppm}", delta="Palabras/Min")
                         with m2:
-                            # Aquí puedes jugar con los valores que la IA suele devolver
-                            st.metric("Fluidez Estimada", "Analizada", delta="Óptima", delta_color="normal")
+                            st.metric("Nivel de Fluidez", f"{fluidez}%", delta="Estimado")
                         with m3:
-                            st.metric("Tipo de Voz", genero, delta=f"{edad} años")
+                            st.metric("Bloqueos", f"{bloqueos}", delta="Detectados", delta_color="inverse")
+                        with m4:
+                            st.metric("Tiempo", f"{duracion:.1f}s")
 
                         st.divider()
 
-                        # 4. Texto completo y Voz
-                        st.markdown("### 📝 Recomendaciones Personalizadas")
-                        st.write(texto_ia)
+                        # 5. Texto completo y Voz
+                        st.markdown("### 📝 Análisis Detallado")
+                        # Limpiamos el texto para no mostrar los códigos técnicos al usuario
+                        texto_limpio = re.sub(r"-(.*):.*", "", texto_ia).strip()
+                        st.write(texto_limpio)
                         
-                        tts = gTTS(text=texto_ia, lang='es')
+                        tts = gTTS(text=texto_limpio, lang='es')
                         audio_fp = io.BytesIO()
                         tts.write_to_fp(audio_fp)
                         st.audio(audio_fp, format='audio/mp3')
 
                     except Exception as e:
-                        st.error(f"Error en el análisis: {e}")
-            
+                        st.error(f"Error en el análisis técnico: {e}")            
 # --- PESTAÑA 3: CONSEJOS PARA EL ENTORNO ---
 with tab3:
     st.header("🤝 Guía para Padres y Educadores")
