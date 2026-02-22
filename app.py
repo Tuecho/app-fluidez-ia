@@ -5,158 +5,202 @@ from gtts import gTTS
 import io
 import librosa
 import numpy as np
+import re
 
 # Configuración de IA
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
-model = genai.GenerativeModel('gemini-flash-latest')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.set_page_config(page_title="Asistente de Fluidez IA", layout="wide")
-st.title("🗣️ Asistente de Fluidez mediante Inteligencia Artificial")
 
-# --- INTERFAZ EN COLUMNAS ---
-col1, col2 = st.columns([1, 1])
+# --- MENÚ DE PESTAÑAS (Orden cambiado a petición de Miguel) ---
 
-with col1:
-    st.subheader("🎙️ Práctica de Voz")
-    
-    # --- INFORMACIÓN DEL USUARIO ---
-    st.write("**Información del usuario:**")
-    col_genero, col_edad = st.columns([1, 1])
-    
-    with col_genero:
-        genero = st.radio(
-            "Género:",
-            ["Niño", "Niña"],
-            horizontal=True,
-            key="genero"
-        )
-    
-    with col_edad:
-        edad = st.number_input(
-            "Edad:",
-            min_value=1,
-            max_value=100,
-            value=10,
-            step=1,
-            key="edad"
-        )
-    
-    st.divider()
-    
-    audio_grabado = mic_recorder(
-        start_prompt="Empezar a hablar 🎙️",
-        stop_prompt="Terminar y Analizar ⏹️",
-        key='grabador'
-    )
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📚 ¿Qué es la Tartamudez?", 
+    "🎙️ Examen de Fluidez", 
+    "🤝 Consejos para el Entorno",
+    "🧘 Ejercicios de Fluidez",
+    "📧 Contacto"
+])
 
-with col2:
-    st.subheader("💡 Recomendaciones de Fluidez")
-    with st.expander("Ver técnicas para la tartamudez", expanded=True):
+
+
+# --- PESTAÑA 1: INFORMACIÓN ---
+with tab1:
+    st.header("¿Qué es la tartamudez?")
+    
+    col_info, col_img = st.columns([2, 1])
+    
+    with col_info:
+        st.write("""
+        La tartamudez (o disfemia) es un trastorno de la comunicación que se caracteriza por interrupciones involuntarias en el habla. 
+        Estas pueden ser repeticiones de sonidos, sílabas o palabras, prolongaciones o bloqueos.
+        """)
+        
+        st.info("💡 **Dato clave:** Es una condición neurobiológica. No tiene nada que ver con la falta de inteligencia o con ser una persona nerviosa.")
+        
+        st.subheader("Mitos y Realidades")
         st.markdown("""
-        * **Inicio suave:** Deja salir un hilo de aire antes de la primera palabra.
-        * **Contacto ligero:** No presiones fuerte los labios en sonidos como /p/, /b/ o /m/.
-        * **Pausas tácticas:** Haz pausas breves entre frases para reducir la velocidad.
-        * **Cancelación:** Si te bloqueas, detente, relaja la tensión y repite con suavidad.
+        * **Mito:** Es un problema psicológico. -> **Realidad:** Es una diferencia en el procesamiento cerebral del habla.
+        * **Mito:** La tartamudez se pega por imitación. -> **Realidad:** La tartamudez no es contagiosa ni se aprende por escuchar a otros tartamudear. Es una condición con base genética y neurológica clara.
+        * **Mito:** Obligar a un niño a terminar la frase le ayuda a aprender. -> **Realidad:** Completar las frases por ellos suele generar frustación e impaciencia. Lo más útil es darle tiempo y demostrarle que lo que dice es más importante que cómo lo dice.
+        * **Mito:** Las personas que tartamudean son tímidas o inseguras. ->**Realidad:** La timidez no causa tartamudez. Lo que ocurre es que, debido a las dificultades de la fluidez, algunas personas pueden volverse más reservadas en situaciones sociales para evitar el bloqueo.
+        * **Mito:** Decir "respira" ayuda. -> **Realidad:** Aumenta la autoconciencia y puede generar más tensión.
+        * **Mito:** Desaparece sola siempre. -> **Realidad:** Muchos niños la superan, pero la intervención temprana es fundamental.
+        """)
+        
+        st.link_button("🌐 Visitar Fundación Española de la Tartamudez", "https://www.fundaciontartamudez.org/")
+
+# --- PESTAÑA 2: HERRAMIENTA DE ANÁLISIS ---
+with tab2:
+    st.title("Examen de Fluidez mediante IA")
+    
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
+        st.subheader("🎙️ Grabación")
+        st.write("**Datos del perfil:**")
+        c_gen, c_edad = st.columns(2)
+        with c_gen:
+            genero = st.radio("Género:", ["Niño", "Niña"], horizontal=True)
+        with c_edad:
+            edad = st.number_input("Edad:", 1, 100, 10)
+
+        st.divider()
+        audio_grabado = mic_recorder(
+            start_prompt="Empezar a hablar 🎙️",
+            stop_prompt="Terminar y Analizar ⏹️",
+            key='grabador'
+        )
+
+    with col2:
+        st.subheader("💡 Técnicas de Apoyo")
+        with st.expander("Ver consejos prácticos", expanded=True):
+            st.markdown("""
+            1. **Inicio suave:** Suelta un poco de aire antes de hablar.
+            2. **Contacto ligero:** Toca suavemente tus labios y lengua al hablar.
+            3. **Velocidad cómoda:** No hay prisa, busca tu propio ritmo.
+            """)
+
+
+# --- PESTAÑA 3: CONSEJOS PARA EL ENTORNO ---
+with tab3:
+    st.header("🤝 Guía para Padres y Educadores")
+    st.write("El apoyo del entorno es la herramienta más potente para mejorar la confianza de quien tartamudea.")
+    
+    col_p, col_profe = st.columns(2)
+    
+    with col_p:
+        st.subheader("🏠 En Casa")
+        st.markdown("""
+        * **Mantén el contacto visual:** No apartes la mirada cuando aparezca un bloqueo; demuestra que estás escuchando con calma.
+        * **No completes sus frases:** Deja que la persona termine por sí misma, aunque sepas qué palabra sigue.
+        * **Reduce la velocidad general:** Habla tú más despacio en lugar de pedirle a él/ella que lo haga. El ejemplo es mejor que la orden.
+        * **Valida el mensaje:** Responde a lo que ha dicho, no a cómo lo ha dicho.
+        """)
+    
+    with col_profe:
+        st.subheader("🏫 En el Colegio")
+        st.markdown("""
+        * **Tiempo extra:** Permite que el alumno se tome su tiempo para responder sin presión de cronómetro.
+        * **Lectura en voz alta:** No le fuerces a leer frente a toda la clase si no se siente cómodo; busca alternativas privadas.
+        * **Tolerancia cero al acoso:** Asegúrate de que el aula sea un lugar seguro donde nadie se burle de las pausas.
+        * **Turnos claros:** Gestiona los turnos de palabra para que no tenga que "luchar" por ser escuchado.
         """)
 
-# --- PROCESAMIENTO ---
-if audio_grabado:
-    st.audio(audio_grabado['bytes'])
+# --- PESTAÑA 4: EJERCICIOS DE FLUIDEZ ---
+with tab4:
+    st.header("🧘 Ejercicios de Entrenamiento")
+    st.write("Estos ejercicios están diseñados para relajar los órganos del habla y mejorar la coordinación aire-voz.")
+    
+    ej_col1, ej_col2 = st.columns(2)
+    
+    with ej_col1:
+        with st.expander("💨 Respiración Diafragmática", expanded=True):
+            st.write("""
+            1. Pon una mano en tu pecho y otra en tu barriga.
+            2. Coge aire por la nariz intentando que solo se mueva la mano de la barriga.
+            3. Suéltalo muy despacio por la boca. 
+            *Objetivo: Evitar la respiración clavicular (de pecho) que genera tensión.*
+            """)
+        
+        with st.expander("👄 Contactos Ligeros"):
+            st.write("""
+            Practica decir palabras que empiecen por /p/, /b/, /m/ o /t/ de forma muy suave. 
+            Imagina que tus labios apenas se rozan, como si fueran plumas.
+            *Ejemplo: Di 'barco' rozando los labios lo mínimo posible.*
+            """)
 
-    if st.button("Analizar el audio grabado"):
-        with st.spinner("La IA está analizando tu grabación..."):
-            try:
-                # Calcular duración del audio
-                audio_array, sr = librosa.load(io.BytesIO(audio_grabado['bytes']), sr=None)
-                duracion_segundos = librosa.get_duration(y=audio_array, sr=sr)
-                duracion_minutos = duracion_segundos / 60
-                
-                # Crear prompt personalizado con información del usuario
-                prompt_personalizado = f"""Analiza este audio de un/a {genero.lower()} de {edad} años. 
-La duración del audio es de {duracion_segundos:.1f} segundos.
+    with ej_col2:
+        with st.expander("🐢 Habla Lenta y Silabeada"):
+            st.write("""
+            Lee una frase exagerando las vocales y alargando los sonidos, como si hablaras a cámara lenta.
+            *Ejemplo: 'Hooo-laaaa, ¿có-mooo es-tááás?'*
+            """)
+            
+        with st.expander("🎶 Lectura en Coro"):
+            st.write("""
+            Lee un texto al mismo tiempo que otra persona (o siguiendo un audio). 
+            Se ha demostrado que leer al unísono reduce casi por completo los bloqueos.
+            """)
 
-Por favor, proporciona un análisis ESTRUCTURADO con las siguientes secciones:
+# --- PESTAÑA 5: CONTACTO ---
+with tab5:
+    st.header("📧 Contacto y Soporte")
+    st.write("¿Tienes sugerencias o necesitas ayuda con esta aplicación?")
+    
+    info_col, form_col = st.columns([1, 1])
+    
+    with info_col:
+        st.info(f"""
+        **Desarrollador:** Miguel Martinez
+        **Proyecto:** Asistente de Fluidez IA 2026
+        **Tecnología:** Streamlit + Gemini 1.5 Flash
+        
+        Esta herramienta ha sido creada para ayudar a personas con tartamudez a practicar en un entorno seguro y privado.
+        """)
+        st.write("---")
+        st.markdown("### 🌐 Enlaces de interés")
+        st.write("- [Fundación Española de la Tartamudez](https://www.fundaciontartamudez.org/)")
+        st.write("- [Asociación Internacional de Tartamudez (ISA)](https://www.isastutter.org/)")
 
-**MÉTRICAS:**
-- Palabras pronunciadas: [número estimado]
-- Velocidad de habla (palabras por minuto): [estimado, SIN la palabra "palabras por minuto", solo el número]
-- Porcentaje de fluidez: [0-100, SIN el símbolo %, solo el número]
-- Problemas detectados: [bloqueos, repeticiones, prolongaciones]
+    with form_col:
+        st.subheader("¡Tu opinión cuenta!")
+        email = st.text_input("Tu correo electrónico")
+        mensaje = st.text_area("Cuéntame tu experiencia o sugerencias")
+        if st.button("Enviar mensaje"):
+            if email and mensaje:
+                st.success(f"¡Gracias Miguel! He recibido tu mensaje (Simulación). En una versión real, esto se enviaría a tu email.")
+            else:
+                st.warning("Por favor, rellena ambos campos.")
 
-**TRANSCRIPCIÓN:**
-[Transcribe el texto completo]
 
-**ANÁLISIS DETALLADO:**
-Como experto en logopedia especializado en desarrollo del habla infantil, identifica:
-- Bloqueos, repeticiones o prolongaciones específicas
-- Palabras o sonidos problemáticos
-- Características de desarrollo para esta edad esperadas
 
-**RECOMENDACIONES:**
-Ofrece feedback constructivo y recomendaciones personalizadas adaptadas a la edad y características de desarrollo."""
-                
-                contenido = [
-                    prompt_personalizado,
-                    {
-                        "mime_type": "audio/wav",
-                        "data": audio_grabado['bytes']
-                    }
-                ]
 
-                response = model.generate_content(contenido)
-                resultado_texto = response.text
+    # PROCESAMIENTO
+    if audio_grabado:
+        st.audio(audio_grabado['bytes'])
 
-                # Extraer métricas del texto de respuesta
-                velocidad_ppm = "N/A"
-                porcentaje_fluidez = "N/A"
-                
+        if st.button("Analizar ahora"):
+            with st.spinner("Analizando..."):
                 try:
-                    # Buscar velocidad de habla
-                    import re
-                    lineas = resultado_texto.split('\n')
-                    for linea in lineas:
-                        if 'Velocidad de habla' in linea or 'velocidad de habla' in linea:
-                            # Extraer número de la línea
-                            numeros = re.findall(r'\d+', linea)
-                            if numeros:
-                                velocidad_ppm = numeros[0]
-                        if 'Porcentaje de fluidez' in linea or 'porcentaje de fluidez' in linea:
-                            # Extraer número de la línea
-                            numeros = re.findall(r'\d+', linea)
-                            if numeros:
-                                porcentaje_fluidez = numeros[0]
-                except:
-                    pass
+                    # Calculamos duración con librosa
+                    audio_array, sr = librosa.load(io.BytesIO(audio_grabado['bytes']), sr=None)
+                    duracion = librosa.get_duration(y=audio_array, sr=sr)
+                    
+                    prompt = f"Analiza la fluidez de un/a {genero} de {edad} años. Duración: {duracion:.1f}s. Sé constructivo."
+                    
+                    contenido = [prompt, {"mime_type": "audio/wav", "data": audio_grabado['bytes']}]
+                    response = model.generate_content(contenido)
+                    
+                    st.success("¡Análisis completado!")
+                    st.write(response.text)
 
-                # --- MOSTRAR MÉTRICAS EN TARJETAS ---
-                st.subheader("📊 Métricas de Análisis")
-                
-                col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-                
-                with col_m1:
-                    st.metric("⏱️ Duración", f"{duracion_segundos:.1f}s", delta="segundos")
-                
-                with col_m2:
-                    st.metric("⏱️ Duración", f"{duracion_minutos:.2f}m", delta="minutos")
-                
-                with col_m3:
-                    st.metric("📊 Velocidad", f"{velocidad_ppm} ppm", delta="palabras/min")
-                
-                with col_m4:
-                    st.metric("✨ Fluidez", f"{porcentaje_fluidez}%", delta="porcentaje")
+                    # Voz de la IA
+                    tts = gTTS(text=response.text, lang='es')
+                    audio_fp = io.BytesIO()
+                    tts.write_to_fp(audio_fp)
+                    st.audio(audio_fp, format='audio/mp3')
 
-                st.divider()
-                
-                st.subheader("Resultado del análisis:")
-                st.write(resultado_texto)
-
-                # --- FUNCIÓN DE LECTURA (TTS) ---
-                st.divider()
-                st.subheader("🔊 Escuchar análisis")
-                tts = gTTS(text=resultado_texto, lang='es')
-                audio_fp = io.BytesIO()
-                tts.write_to_fp(audio_fp)
-                st.audio(audio_fp, format='audio/mp3')
-
-            except Exception as e:
-                st.error(f"Error al procesar: {e}")
+                except Exception as e:
+                    st.error(f"Error: {e}")
